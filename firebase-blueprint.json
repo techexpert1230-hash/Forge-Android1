@@ -1,0 +1,197 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User fitness preferences, daily goals, Health Connect toggle, and reminder settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "name": { "type": "string", "description": "Athlete display name." },
+        "unit": { "type": "string", "enum": ["kg", "lb"], "description": "Preferred weight unit." },
+        "goal": { "type": "integer", "description": "Weekly workout target (1-7)." },
+        "rest": { "type": "integer", "description": "Default rest timer in seconds." },
+        "theme": { "type": "string", "enum": ["dark", "light"], "description": "Preferred UI theme." },
+        "dailyPushUpsTarget": { "type": "integer" },
+        "dailySquatsTarget": { "type": "integer" },
+        "dailyWaterMlTarget": { "type": "integer" },
+        "glassSizeMl": { "type": "integer" },
+        "dailyCaloriesTarget": { "type": "integer" },
+        "dailyProteinTarget": { "type": "integer" },
+        "dailyStepsTarget": { "type": "integer" },
+        "dailyWorkoutMinutesTarget": { "type": "integer" },
+        "workoutReminderEnabled": { "type": "boolean" },
+        "workoutReminderHour": { "type": "integer" },
+        "workoutReminderMinute": { "type": "integer" },
+        "waterReminderEnabled": { "type": "boolean" },
+        "waterReminderIntervalHours": { "type": "integer" },
+        "healthConnectEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on create." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "name", "unit", "goal", "rest", "theme", "createdAt", "updatedAt"]
+    },
+    "WorkoutSession": {
+      "title": "WorkoutSession",
+      "description": "Completed workout session with sets, reps, weight, duration, volume, and PRs.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "dateKey": { "type": "string", "description": "YYYY-MM-DD local date key." },
+        "startMs": { "type": "integer" },
+        "endMs": { "type": "integer" },
+        "durSec": { "type": "integer" },
+        "volKg": { "type": "number" },
+        "setsCount": { "type": "integer" },
+        "pushUpsCount": { "type": "integer" },
+        "squatsCount": { "type": "integer" },
+        "caloriesBurned": { "type": "integer" },
+        "exercises": { "type": "array" },
+        "prs": { "type": "array" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "dateKey", "startMs", "endMs", "durSec", "volKg", "setsCount", "exercises", "createdAt", "updatedAt"]
+    },
+    "DailyLog": {
+      "title": "DailyLog",
+      "description": "Persistent daily activity log keyed by YYYY-MM-DD storing push-ups, squats, water, steps, meals, and other activities.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "pushUps": { "type": "integer" },
+        "squats": { "type": "integer" },
+        "waterMl": { "type": "integer" },
+        "steps": { "type": "integer" },
+        "healthConnectSteps": { "type": "integer" },
+        "workoutMinutes": { "type": "integer" },
+        "caloriesBurned": { "type": "integer" },
+        "otherActivities": { "type": "array" },
+        "meals": { "type": "array" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dateKey", "pushUps", "squats", "waterMl", "steps", "workoutMinutes", "caloriesBurned", "otherActivities", "meals", "createdAt", "updatedAt"]
+    },
+    "PersonalGoal": {
+      "title": "PersonalGoal",
+      "description": "Time-bound daily fitness goal with start date, target end date, and daily completion tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "metricType": { "type": "string" },
+        "targetValue": { "type": "integer" },
+        "unitLabel": { "type": "string" },
+        "startDateKey": { "type": "string" },
+        "endDateKey": { "type": "string" },
+        "active": { "type": "boolean" },
+        "completedDates": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "metricType", "targetValue", "startDateKey", "endDateKey", "active", "completedDates", "createdAt", "updatedAt"]
+    },
+    "BodyMeasurement": {
+      "title": "BodyMeasurement",
+      "description": "Historical body weight and body measurement entry keyed by YYYY-MM-DD.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "weightKg": { "type": "number" },
+        "bodyFatPct": { "type": "number" },
+        "waistCm": { "type": "number" },
+        "chestCm": { "type": "number" },
+        "armCm": { "type": "number" },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dateKey", "weightKg", "createdAt", "updatedAt"]
+    },
+    "CustomRoutine": {
+      "title": "CustomRoutine",
+      "description": "User-created workout routine referencing exercise IDs.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "exerciseIds": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "exerciseIds", "createdAt", "updatedAt"]
+    },
+    "CustomExercise": {
+      "title": "CustomExercise",
+      "description": "User-created custom exercise definition.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "muscleGroup": { "type": "string" },
+        "equipment": { "type": "string" },
+        "trackingKind": { "type": "string", "enum": ["weight", "bw", "hold", "cardio"] },
+        "cues": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "muscleGroup", "equipment", "trackingKind", "cues", "createdAt", "updatedAt"]
+    },
+    "CustomMeal": {
+      "title": "CustomMeal",
+      "description": "User-saved custom meal template with calories and macros.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "mealType": { "type": "string", "enum": ["Breakfast", "Lunch", "Dinner", "Snack"] },
+        "calories": { "type": "integer" },
+        "proteinGrams": { "type": "integer" },
+        "carbsGrams": { "type": "integer" },
+        "fatGrams": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "mealType", "calories", "proteinGrams", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Per-user fitness profile, targets, and preferences."
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": { "$ref": "#/entities/WorkoutSession" },
+      "description": "Completed workout sessions for the authenticated user."
+    },
+    "/users/{userId}/daily_logs/{dateKey}": {
+      "schema": { "$ref": "#/entities/DailyLog" },
+      "description": "Daily activity records keyed by YYYY-MM-DD."
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/PersonalGoal" },
+      "description": "Custom time-bound fitness goals and daily tasks."
+    },
+    "/users/{userId}/measurements/{dateKey}": {
+      "schema": { "$ref": "#/entities/BodyMeasurement" },
+      "description": "Historical weight and body measurements keyed by YYYY-MM-DD."
+    },
+    "/users/{userId}/routines/{routineId}": {
+      "schema": { "$ref": "#/entities/CustomRoutine" },
+      "description": "Custom workout routines created by the user."
+    },
+    "/users/{userId}/custom_exercises/{exerciseId}": {
+      "schema": { "$ref": "#/entities/CustomExercise" },
+      "description": "Custom exercises added by the user."
+    },
+    "/users/{userId}/custom_meals/{mealId}": {
+      "schema": { "$ref": "#/entities/CustomMeal" },
+      "description": "Saved custom meal templates with nutrition info."
+    }
+  }
+}

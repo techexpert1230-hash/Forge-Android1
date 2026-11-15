@@ -1,0 +1,6 @@
+{
+  "name": "Forge",
+  "description": "Neon Dark Fitness tracker APK with complete Daily, Weekly, Monthly, Yearly, and All-Time analytics, Health Connect, offline-capable Firestore sync, and free AI Fitness Coach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

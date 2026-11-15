@@ -1,0 +1,322 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny all reads and writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDateKey(k) {
+      return k is string && k.size() == 10 && k.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestampsCreate(data) {
+      return data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidTimestampsUpdate(data) {
+      return data.createdAt == existing().createdAt &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 40 &&
+             data.unit in ['kg', 'lb'] &&
+             data.goal is int && data.goal >= 1 && data.goal <= 7 &&
+             data.rest is int && data.rest >= 0 && data.rest <= 600 &&
+             data.theme in ['dark', 'light'] &&
+             (!('dailyPushUpsTarget' in data) || (data.dailyPushUpsTarget is int && data.dailyPushUpsTarget >= 0 && data.dailyPushUpsTarget <= 10000)) &&
+             (!('dailySquatsTarget' in data) || (data.dailySquatsTarget is int && data.dailySquatsTarget >= 0 && data.dailySquatsTarget <= 10000)) &&
+             (!('dailyWaterMlTarget' in data) || (data.dailyWaterMlTarget is int && data.dailyWaterMlTarget >= 0 && data.dailyWaterMlTarget <= 20000)) &&
+             (!('glassSizeMl' in data) || (data.glassSizeMl is int && data.glassSizeMl >= 50 && data.glassSizeMl <= 1000)) &&
+             (!('dailyCaloriesTarget' in data) || (data.dailyCaloriesTarget is int && data.dailyCaloriesTarget >= 0 && data.dailyCaloriesTarget <= 15000)) &&
+             (!('dailyProteinTarget' in data) || (data.dailyProteinTarget is int && data.dailyProteinTarget >= 0 && data.dailyProteinTarget <= 1000)) &&
+             (!('dailyStepsTarget' in data) || (data.dailyStepsTarget is int && data.dailyStepsTarget >= 0 && data.dailyStepsTarget <= 100000)) &&
+             (!('dailyWorkoutMinutesTarget' in data) || (data.dailyWorkoutMinutesTarget is int && data.dailyWorkoutMinutesTarget >= 0 && data.dailyWorkoutMinutesTarget <= 600)) &&
+             (!('workoutReminderEnabled' in data) || data.workoutReminderEnabled is bool) &&
+             (!('workoutReminderHour' in data) || (data.workoutReminderHour is int && data.workoutReminderHour >= 0 && data.workoutReminderHour <= 23)) &&
+             (!('workoutReminderMinute' in data) || (data.workoutReminderMinute is int && data.workoutReminderMinute >= 0 && data.workoutReminderMinute <= 59)) &&
+             (!('waterReminderEnabled' in data) || data.waterReminderEnabled is bool) &&
+             (!('waterReminderIntervalHours' in data) || (data.waterReminderIntervalHours is int && data.waterReminderIntervalHours >= 1 && data.waterReminderIntervalHours <= 12)) &&
+             (!('healthConnectEnabled' in data) || data.healthConnectEnabled is bool);
+    }
+
+    function isValidWorkoutSession(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             isValidDateKey(data.dateKey) &&
+             data.startMs is int && data.startMs > 0 &&
+             data.endMs is int && data.endMs >= data.startMs &&
+             data.durSec is int && data.durSec >= 0 && data.durSec <= 86400 &&
+             data.volKg is number && data.volKg >= 0 && data.volKg <= 10000000 &&
+             data.setsCount is int && data.setsCount >= 0 && data.setsCount <= 500 &&
+             (!('pushUpsCount' in data) || (data.pushUpsCount is int && data.pushUpsCount >= 0 && data.pushUpsCount <= 50000)) &&
+             (!('squatsCount' in data) || (data.squatsCount is int && data.squatsCount >= 0 && data.squatsCount <= 50000)) &&
+             (!('caloriesBurned' in data) || (data.caloriesBurned is int && data.caloriesBurned >= 0 && data.caloriesBurned <= 20000)) &&
+             data.exercises is list && data.exercises.size() <= 30 && (data.exercises.size() == 0 || data.exercises[0] is map) &&
+             (!('prs' in data) || (data.prs is list && data.prs.size() <= 30 && (data.prs.size() == 0 || data.prs[0] is map))) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidDailyLog(data) {
+      return data.userId == request.auth.uid &&
+             isValidDateKey(data.dateKey) &&
+             data.pushUps is int && data.pushUps >= 0 && data.pushUps <= 100000 &&
+             data.squats is int && data.squats >= 0 && data.squats <= 100000 &&
+             data.waterMl is int && data.waterMl >= 0 && data.waterMl <= 50000 &&
+             data.steps is int && data.steps >= 0 && data.steps <= 250000 &&
+             (!('healthConnectSteps' in data) || (data.healthConnectSteps is int && data.healthConnectSteps >= 0 && data.healthConnectSteps <= 250000)) &&
+             data.workoutMinutes is int && data.workoutMinutes >= 0 && data.workoutMinutes <= 1440 &&
+             data.caloriesBurned is int && data.caloriesBurned >= 0 && data.caloriesBurned <= 20000 &&
+             data.otherActivities is list && data.otherActivities.size() <= 50 && (data.otherActivities.size() == 0 || data.otherActivities[0] is map) &&
+             data.meals is list && data.meals.size() <= 50 && (data.meals.size() == 0 || data.meals[0] is map) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidPersonalGoal(data) {
+      return data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.metricType in ['pushups', 'squats', 'water_ml', 'steps', 'workouts', 'calories', 'protein', 'minutes', 'custom'] &&
+             data.targetValue is int && data.targetValue >= 1 && data.targetValue <= 1000000 &&
+             (!('unitLabel' in data) || (data.unitLabel is string && data.unitLabel.size() <= 24)) &&
+             isValidDateKey(data.startDateKey) &&
+             isValidDateKey(data.endDateKey) &&
+             data.active is bool &&
+             data.completedDates is list && data.completedDates.size() <= 366 && (data.completedDates.size() == 0 || data.completedDates[0] is string);
+    }
+
+    function isValidBodyMeasurement(data) {
+      return data.userId == request.auth.uid &&
+             isValidDateKey(data.dateKey) &&
+             data.weightKg is number && data.weightKg >= 10 && data.weightKg <= 700 &&
+             (!('bodyFatPct' in data) || (data.bodyFatPct is number && data.bodyFatPct >= 1 && data.bodyFatPct <= 80)) &&
+             (!('waistCm' in data) || (data.waistCm is number && data.waistCm >= 20 && data.waistCm <= 300)) &&
+             (!('chestCm' in data) || (data.chestCm is number && data.chestCm >= 20 && data.chestCm <= 300)) &&
+             (!('armCm' in data) || (data.armCm is number && data.armCm >= 10 && data.armCm <= 150)) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 300));
+    }
+
+    function isValidCustomRoutine(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+             data.exerciseIds is list && data.exerciseIds.size() >= 1 && data.exerciseIds.size() <= 30 && data.exerciseIds[0] is string;
+    }
+
+    function isValidCustomExercise(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.muscleGroup is string && data.muscleGroup.size() >= 1 && data.muscleGroup.size() <= 30 &&
+             data.equipment is string && data.equipment.size() >= 1 && data.equipment.size() <= 40 &&
+             data.trackingKind in ['weight', 'bw', 'hold', 'cardio'] &&
+             data.cues is list && data.cues.size() <= 10 && (data.cues.size() == 0 || data.cues[0] is string);
+    }
+
+    function isValidCustomMeal(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.mealType in ['Breakfast', 'Lunch', 'Dinner', 'Snack'] &&
+             data.calories is int && data.calories >= 0 && data.calories <= 10000 &&
+             data.proteinGrams is int && data.proteinGrams >= 0 && data.proteinGrams <= 1000 &&
+             (!('carbsGrams' in data) || (data.carbsGrams is int && data.carbsGrams >= 0 && data.carbsGrams <= 1000)) &&
+             (!('fatGrams' in data) || (data.fatGrams is int && data.fatGrams >= 0 && data.fatGrams <= 1000));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'name', 'unit', 'goal', 'rest', 'theme', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'name', 'unit', 'goal', 'rest', 'theme',
+                         'dailyPushUpsTarget', 'dailySquatsTarget', 'dailyWaterMlTarget', 'glassSizeMl',
+                         'dailyCaloriesTarget', 'dailyProteinTarget', 'dailyStepsTarget', 'dailyWorkoutMinutesTarget',
+                         'workoutReminderEnabled', 'workoutReminderHour', 'workoutReminderMinute',
+                         'waterReminderEnabled', 'waterReminderIntervalHours', 'healthConnectEnabled',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidTimestampsCreate(incoming()) &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       isValidTimestampsUpdate(incoming()) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'unit', 'goal', 'rest', 'theme',
+                         'dailyPushUpsTarget', 'dailySquatsTarget', 'dailyWaterMlTarget', 'glassSizeMl',
+                         'dailyCaloriesTarget', 'dailyProteinTarget', 'dailyStepsTarget', 'dailyWorkoutMinutesTarget',
+                         'workoutReminderEnabled', 'workoutReminderHour', 'workoutReminderMinute',
+                         'waterReminderEnabled', 'waterReminderIntervalHours', 'healthConnectEnabled',
+                         'updatedAt'
+                       ]);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /workouts/{workoutId} {
+        allow get: if isOwner(userId) && isValidId(workoutId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(workoutId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'dateKey', 'startMs', 'endMs', 'durSec', 'volKg', 'setsCount', 'exercises', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'dateKey', 'startMs', 'endMs', 'durSec', 'volKg',
+                           'setsCount', 'pushUpsCount', 'squatsCount', 'caloriesBurned', 'exercises', 'prs', 'notes',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidWorkoutSession(incoming());
+        allow update: if isOwner(userId) && isValidId(workoutId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidWorkoutSession(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'dateKey', 'startMs', 'endMs', 'durSec', 'volKg',
+                           'setsCount', 'pushUpsCount', 'squatsCount', 'caloriesBurned', 'exercises', 'prs', 'notes',
+                           'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(workoutId);
+      }
+
+      match /daily_logs/{dateKey} {
+        allow get: if isOwner(userId) && isValidDateKey(dateKey);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDateKey(dateKey) &&
+                         incoming().dateKey == dateKey &&
+                         incoming().keys().hasAll(['userId', 'dateKey', 'pushUps', 'squats', 'waterMl', 'steps', 'workoutMinutes', 'caloriesBurned', 'otherActivities', 'meals', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'pushUps', 'squats', 'waterMl', 'steps', 'healthConnectSteps',
+                           'workoutMinutes', 'caloriesBurned', 'otherActivities', 'meals', 'notes',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidDailyLog(incoming());
+        allow update: if isOwner(userId) && isValidDateKey(dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidDailyLog(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'pushUps', 'squats', 'waterMl', 'steps', 'healthConnectSteps',
+                           'workoutMinutes', 'caloriesBurned', 'otherActivities', 'meals', 'notes',
+                           'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidDateKey(dateKey);
+      }
+
+      match /goals/{goalId} {
+        allow get: if isOwner(userId) && isValidId(goalId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(goalId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'metricType', 'targetValue', 'startDateKey', 'endDateKey', 'active', 'completedDates', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'metricType', 'targetValue', 'unitLabel',
+                           'startDateKey', 'endDateKey', 'active', 'completedDates',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidPersonalGoal(incoming());
+        allow update: if isOwner(userId) && isValidId(goalId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidPersonalGoal(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'metricType', 'targetValue', 'unitLabel',
+                           'startDateKey', 'endDateKey', 'active', 'completedDates',
+                           'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+
+      match /measurements/{dateKey} {
+        allow get: if isOwner(userId) && isValidDateKey(dateKey);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDateKey(dateKey) &&
+                         incoming().dateKey == dateKey &&
+                         incoming().keys().hasAll(['userId', 'dateKey', 'weightKg', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'weightKg', 'bodyFatPct', 'waistCm', 'chestCm', 'armCm', 'note',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidBodyMeasurement(incoming());
+        allow update: if isOwner(userId) && isValidDateKey(dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidBodyMeasurement(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'weightKg', 'bodyFatPct', 'waistCm', 'chestCm', 'armCm', 'note',
+                           'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidDateKey(dateKey);
+      }
+
+      match /routines/{routineId} {
+        allow get: if isOwner(userId) && isValidId(routineId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(routineId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'exerciseIds', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'exerciseIds', 'createdAt', 'updatedAt']) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidCustomRoutine(incoming());
+        allow update: if isOwner(userId) && isValidId(routineId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidCustomRoutine(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'exerciseIds', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(routineId);
+      }
+
+      match /custom_exercises/{exerciseId} {
+        allow get: if isOwner(userId) && isValidId(exerciseId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(exerciseId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'muscleGroup', 'equipment', 'trackingKind', 'cues', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'muscleGroup', 'equipment', 'trackingKind', 'cues', 'createdAt', 'updatedAt']) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidCustomExercise(incoming());
+        allow update: if isOwner(userId) && isValidId(exerciseId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidCustomExercise(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'muscleGroup', 'equipment', 'trackingKind', 'cues', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(exerciseId);
+      }
+
+      match /custom_meals/{mealId} {
+        allow get: if isOwner(userId) && isValidId(mealId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(mealId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'mealType', 'calories', 'proteinGrams', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'mealType', 'calories', 'proteinGrams', 'carbsGrams', 'fatGrams', 'createdAt', 'updatedAt']) &&
+                         isValidTimestampsCreate(incoming()) &&
+                         isValidCustomMeal(incoming());
+        allow update: if isOwner(userId) && isValidId(mealId) &&
+                         incoming().userId == existing().userId &&
+                         isValidTimestampsUpdate(incoming()) &&
+                         isValidCustomMeal(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'mealType', 'calories', 'proteinGrams', 'carbsGrams', 'fatGrams', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(mealId);
+      }
+    }
+  }
+}
